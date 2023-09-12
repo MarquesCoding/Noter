@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URI")
+}
+
+model User {
+  id                 String         @id @default(uuid()) @db.Uuid
+  username           String         @unique
+  name               String?
+  surname            String?
+  email              String         @unique
+  passwordHash       String
+  passwordResetToken String?        @unique
+  profileImageHash   String?
+  age                Int?
+  address            String?
+  phone              String?
+  verified           Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  createdTickets     Ticket[]       @relation("CreatedBy")
+  assignedTickets    Ticket[]       @relation("AssignedTo")
+  organisation       Organisation[]
+  role               UserToRoles[]
+}
+
+model Organisation {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  name                    String                    @unique
+  description             String?
+  favicon                 String?
+  domain                  String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  boards                  Board[]
+  roles                   Role[]
+  User                    User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                  String                    @db.Uuid
+  OrganisationInviteCodes OrganisationInviteCodes[]
+}
+
+model OrganisationInviteCodes {
+  id             String       @id @default(uuid()) @db.Uuid
+  code           String       @unique
+  expiresAt      DateTime
+  organisation   Organisation @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organisationId String       @db.Uuid
+}
+
+model Board {
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String         @unique
+  description    String?
+  favicon        String?
+  tags           Tag[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  organisation   Organisation?  @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisationId String         @db.Uuid
+  ticketColumns  TicketColumn[]
+}
+
+model TicketColumn {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  tickets   Ticket[]
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Ticket {
+  id             String        @id @default(uuid()) @db.Uuid
+  title          String
+  description    String?
+  status         String
+  priority       Int           @default(0)
+  tshirtSize     TShirtSize?
+  tags           Tag[]
+  dueDate        DateTime?
+  attachments    String[]
+  createdBy      User          @relation("CreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById    String        @db.Uuid
+  assignedTo     User?         @relation("AssignedTo", fields: [assignedToId], references: [id], onDelete: Cascade)
+  assignedToId   String?       @db.Uuid
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  TicketColumn   TicketColumn? @relation(fields: [ticketColumnId], references: [id])
+  ticketColumnId String?       @db.Uuid
+}
+
+model Tag {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique
+  board    Board?  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId  String  @db.Uuid
+  Ticket   Ticket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId String? @db.Uuid
+}
+
+model UserToRoles {
+  id        String   @id @default(uuid()) @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Role {
+  id             String            @id @default(uuid()) @db.Uuid
+  name           String            @unique
+  permissions    RolePermissions[]
+  isDefault      Boolean           @default(false)
+  organisation   Organisation?     @relation(fields: [organisationId], references: [id], onDelete: Cascade)
+  organisationId String            @db.Uuid
+  UserToRoles    UserToRoles[]
+}
+
+model RolePermissions {
+  id                String   @id @default(uuid()) @db.Uuid
+  role              Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId            String   @db.Uuid
+  canEditTickets    Boolean  @default(true)
+  canDeleteTickets  Boolean  @default(false)
+  canCreateTickets  Boolean  @default(true)
+  canCommentTickets Boolean  @default(true)
+  canAssignTickets  Boolean  @default(true)
+  canCloseTickets   Boolean  @default(false)
+  canViewTickets    Boolean  @default(true)
+  canCreateBoardTag Boolean  @default(false)
+  canCreateBoard    Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum TShirtSize {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+}
