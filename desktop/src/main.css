@@ -1,0 +1,8 @@
+@font-face {
+  font-family:sohne-var;
+  src:url('public/fonts/f965fdf4.woff2')
+}
+body {
+  font-family: sohne-var, sans-serif;
+
+}
